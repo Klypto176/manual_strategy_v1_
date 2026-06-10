@@ -349,6 +349,7 @@ def process_stock_tick(historic_data, tick):
         stock = tick.get("stock_code", tick.get("Stock", "UNKNOWN"))
 
         df = pd.read_json(historic_data)
+        df['datetime'] = pd.to_datetime(df['datetime'],dayfirst=True)
 
         if len(df) < 200:
             return None
