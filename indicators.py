@@ -340,6 +340,13 @@ def candle_filter(df, gap_threshold=0.01, body_threshold=0.015, wick_ratio=2):
         "reason": ",".join(reason) if reason else "pass"
     }
 
+def _to_numeric_df(df):
+    str_cols = {"datetime", "stock_code", "exchange_code", "SSL_Trend", "SSL2_Trend", "SSL_Exit_Trend", "HLV1", "HLV2", "HLV3"}
+    for c in df.columns:
+        if c not in str_cols:
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+    return df
+
 
 def process_stock_tick(historic_data, tick):
     try:
@@ -348,8 +355,10 @@ def process_stock_tick(historic_data, tick):
 
         stock = tick.get("stock_code", tick.get("Stock", "UNKNOWN"))
 
-        df = pd.read_json(historic_data)
-        df['datetime'] = pd.to_datetime(df['datetime'],dayfirst=True)
+        df = pd.DataFrame(historic_data)
+        df = _to_numeric_df(df)
+        df["datetime"] = pd.to_datetime(df["datetime"], dayfirst=True, errors="coerce")
+        df = df.dropna(subset=["datetime"])
 
         if len(df) < 200:
             return None
@@ -369,6 +378,7 @@ def process_stock_tick(historic_data, tick):
         df = df.sort_values("datetime").tail(MAX_ROWS).reset_index(drop=True)
 
         df = update_indicators(df)
+        df = _to_numeric_df(df)
 
         row = df.iloc[-1]
 
@@ -409,12 +419,18 @@ def process_stock_tick(historic_data, tick):
             "status": "TRADED",
             "type": trade_type,
             "entry_time": str(row["datetime"]),
-            "entry_price": entry_close,
+            "entry_price": float(entry_close),
             "trend": trend,
             "signal": signal,
-            "rsi": rsi,
-            "ssl_trend": row["SSL_Trend"],
-            "candle_info": candle_info
+            "rsi": float(rsi),
+            "ssl_trend": str(row["SSL_Trend"]),
+            "candle_info": {
+                "gap_pct": float(candle_info["gap_pct"]) if candle_info["gap_pct"] is not None else None,
+                "body_pct": float(candle_info["body_pct"]) if candle_info["body_pct"] is not None else None,
+                "upper_wick": float(candle_info["upper_wick"]) if candle_info["upper_wick"] is not None else None,
+                "lower_wick": float(candle_info["lower_wick"]) if candle_info["lower_wick"] is not None else None,
+                "reason": candle_info["reason"]
+            }
         }
 
     except Exception as e:
