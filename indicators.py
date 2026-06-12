@@ -422,7 +422,7 @@ def process_stock_tick(historic_data, tick):
         ssl_pct = ssl_distance / entry_open
 
         if not (ssl_between or ssl_pct <= 0.005):
-            return {"reason": "SSL line not nearby"}
+            return {"reason": f"SSL line not nearby | (SSL distance {ssl_distance} | SSL pct {ssl_pct} | SSL between {ssl_between}"}
 
         trade_type = "CALL" if trend == "UP" else "PUT"
 
