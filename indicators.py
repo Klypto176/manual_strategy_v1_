@@ -351,20 +351,20 @@ def _to_numeric_df(df):
 def process_stock_tick(historic_data, tick):
     try:
         if not historic_data or not tick:
-            return None
+            return {"reason":"either historic data or live tick not available"}
 
         stock = tick.get("stock_code", tick.get("Stock", "UNKNOWN"))
 
         df = pd.DataFrame(historic_data)
         df = _to_numeric_df(df)
-        df["datetime"] = pd.to_datetime(df["datetime"], dayfirst=True, errors="coerce")
+        df["datetime"] = pd.to_datetime(df["datetime"], dayfirst=True, format="mixed", errors="coerce")
         df = df.dropna(subset=["datetime"])
 
         if len(df) < 200:
-            return None
+            return {"reason": f"insufficient historic data : {len(df)}"}
 
         new_row = pd.DataFrame([{
-            "datetime": pd.to_datetime(tick["datetime"], dayfirst=True),
+            "datetime": pd.to_datetime(tick["datetime"], dayfirst=True, format="mixed", errors="coerce"),
             "stock_code": stock,
             "open": float(tick["open"]),
             "high": float(tick["high"]),
@@ -384,19 +384,19 @@ def process_stock_tick(historic_data, tick):
 
         trend, signal = check_sma_conditions(df)
         if trend is None:
-            return None
+            return {"reason": "SMA conditions not met"}
 
         rsi = row["RSI"]
         if pd.isna(rsi):
-            return None
+            return {"reason": "RSI not available for latest tick"}
         if trend == "UP" and rsi <= 70:
-            return None
+            return {"reason": f"RSI(less than 70): {rsi} weak for CALL"}
         if trend == "DOWN" and rsi > 30:
-            return None
+            return {"reason": f"RSI(greater than 30): {rsi} weak for PUT"}
 
         valid_candle, candle_info = candle_filter(df)
         if not valid_candle:
-            return None
+            return {"reason": f"candle fail reason :{candle_info['reason']}, gap : {candle_info['gap_pct']*100}%, body :{candle_info['body_pct']*100}%, wick : upper - {candle_info['upper_wick']}, lower - {candle_info['lower_wick']}"}
 
         entry_open = row["open"]
         entry_close = row["close"]
@@ -409,7 +409,7 @@ def process_stock_tick(historic_data, tick):
         ssl_pct = ssl_distance / entry_open
 
         if not (ssl_between or ssl_pct <= 0.005):
-            return None
+            return {"reason": "SSL line not nearby"}
 
         trade_type = "CALL" if trend == "UP" else "PUT"
 
@@ -423,7 +423,7 @@ def process_stock_tick(historic_data, tick):
             "trend": trend,
             "signal": signal,
             "rsi": float(rsi),
-            "ssl_trend": str(row["SSL_Trend"]),
+            "ssl_trend": str(row["SSL_Trend"])
             "candle_info": {
                 "gap_pct": float(candle_info["gap_pct"]) if candle_info["gap_pct"] is not None else None,
                 "body_pct": float(candle_info["body_pct"]) if candle_info["body_pct"] is not None else None,

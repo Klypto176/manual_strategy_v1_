@@ -6,8 +6,8 @@ import uvicorn
 from indicators import process_stock_tick
 
 app = FastAPI(
-    title="Stock Indicator API",
-    description="Process stock ticks with SMA, RSI, SSL indicators and return trade signals",
+    title="Manual Strategy API",
+    description="Process stock ticks with SMA, RSI, SSL indicators with SMA conditions and candle filter v1.0 ,and return trade signals",
     version="1.0.0",
 )
 
@@ -34,7 +34,7 @@ class HealthResponse(BaseModel):
 
 @app.get("/health", response_model=HealthResponse)
 def health():
-    return HealthResponse(status="ok", service="stock-indicator-api")
+    return HealthResponse(status="ok", service="manual-strategy-api")
 
 
 @app.post("/predict")
@@ -44,6 +44,8 @@ def predict(request: PredictRequest):
         raise HTTPException(status_code=204, detail="No trade signal generated")
     if "error" in result:
         raise HTTPException(status_code=500, detail=result["error"])
+    if "[reason]" in result:
+        return{"signal": None, "reason": result["reason"]}
     return result
 
 
