@@ -407,7 +407,7 @@ def process_stock_tick(historic_data, tick):
         if trend == "DOWN" and rsi > 30:
             return {"reason": f"RSI(greater than 30): {rsi} weak for PUT"}
 
-        valid_candle, candle_info = candle_filter(df)
+        valid_candle, candle_info = candle_filter_v1_1(df)
         if not valid_candle:
             return {"reason": f"candle fail reason :{candle_info['reason']}, gap : {candle_info['gap_pct']*100}%, body :{candle_info['body_pct']*100}%, wick : upper - {candle_info['upper_wick']}, lower - {candle_info['lower_wick']}"}
 
