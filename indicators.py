@@ -312,17 +312,30 @@ def candle_filter(df, gap_threshold=0.01, body_threshold=0.015, wick_ratio=2):
     close_ = row["close"]
     high_ = row["high"]
     low_ = row["low"]
+    prev_open = prev["open"]
     prev_close = prev["close"]
 
-    gap_pct = (open_ - prev_close) / prev_close
-    gap_flag = abs(gap_pct) > gap_threshold
+    prev_body_lo = min(prev_open, prev_close)
+    prev_body_hi = max(prev_open, prev_close)
+    curr_body_lo = min(open_, close_)
+    curr_body_hi = max(open_, close_)
+
+    if curr_body_lo <= prev_body_hi and curr_body_hi >= prev_body_lo:
+        gap_pct = 0.0
+        gap_flag = False
+    elif curr_body_lo > prev_body_hi:
+        gap_pct = (curr_body_lo - prev_body_hi) / prev_body_hi
+        gap_flag = abs(gap_pct) > gap_threshold
+    else:
+        gap_pct = (curr_body_hi - prev_body_lo) / prev_body_lo
+        gap_flag = abs(gap_pct) > gap_threshold
 
     body = abs(close_ - open_)
     body_pct = body / open_ if open_ != 0 else 0
     body_flag = body_pct > body_threshold
 
-    upper_wick = high_ - max(open_, close_)
-    lower_wick = min(open_, close_) - low_
+    upper_wick = abs(high_ - max(open_, close_))
+    lower_wick = abs(min(open_, close_) - low_)
     wick_flag = (upper_wick > body * wick_ratio) or (lower_wick > body * wick_ratio)
 
     reject = gap_flag or body_flag or wick_flag
