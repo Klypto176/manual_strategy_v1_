@@ -298,7 +298,7 @@ def check_sma_conditions(df, lookback=3):
     return None, None
 
 
-def candle_filter(df, gap_threshold=0.01, body_threshold=0.015, wick_ratio=2):
+def candle_filter_v1_1(df, gap_threshold=0.01, body_threshold=0.015, wick_ratio=2):
     if len(df) < 2:
         return False, {
             "gap_pct": None, "body_pct": None,
